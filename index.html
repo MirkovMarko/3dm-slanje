@@ -8,6 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
+.nav a{cursor:pointer}.empty{background:var(--card);border-radius:18px;box-shadow:var(--sh);padding:22px 18px;margin-top:16px;color:var(--mut);font-weight:700}
+.empty b{display:block;color:var(--ink);font:800 18px var(--disp);margin-bottom:6px}
+.row{background:var(--card);border-radius:16px;box-shadow:var(--sh);padding:12px 16px;margin-top:10px;display:grid;grid-template-columns:90px 1fr auto;gap:4px 14px;align-items:center}
 :root{--bg:#e6eaf3;--card:#fff;--card2:#f4f6fb;--line:#d6dcea;--ink:#141a2e;--mut:#5f6b88;
 --g:#12915a;--gs:#1fbf7a;--y:#b87400;--ys:#f2a81d;--r:#d93a40;--rs:#f0484e;--b:#3d5bd9;--bs:#5b7cff;
 --zv:#d0202e;--zv2:#fde7e9;--pa:#1b1b1f;--pa2:#ececef;
@@ -102,7 +105,7 @@ select.btn{appearance:auto}
 <body>
 <header><div class="hd">
   <div class="logo">3DM<span>.</span></div>
-  <nav class="nav"><a class="on">Slanje</a><a>Štampači</a><a>Lager</a><a>Za proveru</a><a>Škart</a></nav>
+  <nav class="nav" id="nav"><a data-t="slanje" class="on">Slanje</a><a data-t="stampaci">Štampači</a><a data-t="lager">Lager</a><a data-t="provera">Za proveru</a><a data-t="skart">Škart</a></nav>
 </div></header>
 <div class="wrap" id="login" style="display:none;max-width:380px;padding-top:60px">
   <h1>Prijava</h1><div class="sub">Isti nalog kao 3DM Odluka.</div>
@@ -114,6 +117,7 @@ select.btn{appearance:auto}
 <div class="wrap" id="app" style="display:none">
   <div class="prev" id="meta">Učitavam…</div>
 
+  <section id="t-slanje">
   <h1 id="title"></h1><div class="sub" id="sub"></div>
   <div class="days" id="days"></div>
 
@@ -127,7 +131,11 @@ select.btn{appearance:auto}
   <input class="search" id="q" placeholder="🔎 Traži ime ili broj (na telefonu: mikrofon na tastaturi)" oninput="render()">
   <div class="filters" id="filters"></div>
   <div id="list"></div>
-
+  </section>
+  <section id="t-stampaci" hidden><h1>Štampači</h1><div class="sub">Šta koji štampač radi i šta je danas odštampao.</div><div id="stampaci"></div></section>
+  <section id="t-lager" hidden><h1>Lager</h1><div class="sub">Gotova lica na lageru, uz tvoju potvrdu da fizički postoje.</div><div id="lager"></div></section>
+  <section id="t-provera" hidden><h1>Za proveru</h1><div class="sub">Lampe sa napomenom ili bez potvrde kupca.</div><div id="provera"></div></section>
+  <section id="t-skart" hidden><h1>Škart</h1><div class="sub">Loša lica i kutije po štampaču.</div><div id="skart"></div></section>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -201,6 +209,25 @@ function ok(b){toast(USKORO)}
 function bad(b,w){toast(USKORO)}
 function mv(b,d){if(d)toast(USKORO);render()}
 const sb=supabase.createClient("https://auwkcdfsflhptaggasbv.supabase.co","sb_publishable_12adbySKqi26fKObwmiKbg_u2ieOfe1",{auth:{persistSession:true,autoRefreshToken:true,storageKey:"3dm-slanje-auth"}});
+
+let tab="slanje";
+document.getElementById("nav").addEventListener("click",e=>{const a=e.target.closest("a[data-t]");if(!a)return;tab=a.dataset.t;
+  document.querySelectorAll("#nav a").forEach(x=>x.classList.toggle("on",x===a));
+  document.querySelectorAll("section[id^=t-]").forEach(x=>x.hidden=x.id!=="t-"+tab);ostali();window.scrollTo(0,0)});
+const prazno=(n,t)=>`<div class="empty"><b>${n}</b>${t}</div>`;
+async function ostali(){
+  if(tab==="provera"){const rr=R.filter(r=>r.nap||r.st==="ceka_odgovor").sort((a,b)=>a.br.localeCompare(b.br,undefined,{numeric:true}));
+    $("provera").innerHTML=rr.length?rr.map(r=>`<div class="row"><div><div class="br">${r.br}</div><span class="club ${LP(r.lampa)[1]}">${LP(r.lampa)[0]}</span></div>
+      <div><div class="name" style="font-size:20px">${r.ime}</div><div class="ps">${DANI.find(d=>d[0]===r.dan)?.[1]||r.dan||""} · ${r.kupac}</div></div>
+      <span class="pill ${ST[r.st]?.[1]||"k"}">${ST[r.st]?.[0]||r.st}</span><div class="note">${r.nap||"Kupac još nije potvrdio SMS"}</div></div>`).join(""):prazno("Sve je čisto","Nema lampi za proveru.");}
+  if(tab==="stampaci"){const {data}=await sb.from("slanje_stampaci").select("*").order("naziv");
+    $("stampaci").innerHTML=data&&data.length?data.map(p=>`<div class="row"><div class="br">${p.naziv}</div><div><b>${p.stanje||""}</b><div class="ps">${p.posao||""}${p.preostalo_min!=null?" · još "+p.preostalo_min+" min":""}</div></div><div class="ps">danas: ${(p.danas||[]).length}</div></div>`).join("")
+     :prazno("Još nema podataka","Ovde će stajati P1S STARI, P1S V2, A1 NOVI i A1 STARI: šta štampaju, koliko je ostalo i spisak šta je svaki danas odštampao. Puni ga radionički računar na 10 minuta — to je sledeći korak izrade.");}
+  if(tab==="lager") $("lager").innerHTML=prazno("Uskoro","Kad popuniš tab Lager u tabeli i proverimo kako ga n8n uparuje, radionički računar će ga prebacivati ovde, sa dugmetom „Imam ga u ruci“ pre nego što se lice uzme za narudžbinu.");
+  if(tab==="skart"){const {data}=await sb.from("slanje_skart").select("*").order("created_at",{ascending:false}).limit(100);
+    $("skart").innerHTML=data&&data.length?data.map(x=>`<div class="row"><div class="br">${x.br||""}</div><div><b>${x.sta==="lice"?"Loše lice":"Loša kutija"}</b><div class="ps">${x.stampac||"štampač nepoznat"}</div></div><div class="ps">${new Date(x.created_at).toLocaleString("sr-RS")}</div></div>`).join("")
+     :prazno("Još nema škarta","Svaki klik na „Loše lice“ ili „Loša kutija“ (u aplikaciji ili na Telegramu) upisaće se ovde, po štampaču. Dugmad proradiće kad se poveže radionički računar.");}
+}
 async function ucitaj(){
   const [l,p,m]=await Promise.all([sb.from("slanje_lampe").select("*"),sb.from("slanje_spakovano").select("br"),sb.from("slanje_meta").select("*").eq("kljuc","poslednje_osvezavanje")]);
   if(l.error){toast("Greška: "+l.error.message);return}
@@ -208,7 +235,7 @@ async function ucitaj(){
   packed={};(p.data||[]).forEach(x=>packed[x.br]=1);
   const mm=(m.data||[])[0];$("meta").textContent="Podaci: "+(mm?mm.vrednost+" · "+new Date(mm.azurirano).toLocaleString("sr-RS"):"još nema osvežavanja");
   if(!DANI.some(d=>d[0]===cur&&R.some(r=>r.dan===cur))){const f=DANI.find(d=>R.some(r=>r.dan===d[0]));if(f)cur=f[0]}
-  render()}
+  render();ostali()}
 async function prijava(){$("lerr").textContent="";const {error}=await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});
   if(error){$("lerr").textContent="Pogrešan email ili lozinka.";return}start()}
 async function start(){const {data}=await sb.auth.getSession();
