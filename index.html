@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3DM Slanje</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e6eaf3;--card:#fff;--card2:#f4f6fb;--line:#d6dcea;--ink:#141a2e;--mut:#5f6b88;
+--g:#12915a;--gs:#1fbf7a;--y:#b87400;--ys:#f2a81d;--r:#d93a40;--rs:#f0484e;--b:#3d5bd9;--bs:#5b7cff;
+--zv:#d0202e;--zv2:#fde7e9;--pa:#1b1b1f;--pa2:#ececef;
+--sh:0 1px 2px #141a2e14,0 6px 18px #141a2e12;
+--disp:'Bricolage Grotesque',system-ui,sans-serif;--body:'Manrope',system-ui,-apple-system,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1426;--card:#171e36;--card2:#1d2646;--line:#2a3558;--ink:#eef1fa;--mut:#9aa6c6;--zv2:#3a1a22;--pa:#e9e9ee;--pa2:#262b3d;--sh:0 1px 2px #0006,0 8px 22px #0005}}
+:root[data-theme="dark"]{--bg:#0f1426;--card:#171e36;--card2:#1d2646;--line:#2a3558;--ink:#eef1fa;--mut:#9aa6c6;--zv2:#3a1a22;--pa:#e9e9ee;--pa2:#262b3d;--sh:0 1px 2px #0006,0 8px 22px #0005}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:500 16px/1.4 var(--body);font-variant-numeric:tabular-nums}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px 80px}
+/* nav kao u 3DM Odluka */
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.hd{max-width:1040px;margin:0 auto;padding:10px 16px;display:flex;gap:14px;align-items:center;overflow-x:auto}
+.logo{font:800 20px var(--disp);white-space:nowrap}.logo span{color:var(--zv)}
+.nav{display:flex;gap:4px}
+.nav a{font:700 14px var(--body);color:var(--mut);text-decoration:none;padding:7px 12px;border-radius:99px;white-space:nowrap}
+.nav a.on{background:var(--ink);color:var(--bg)}
+.nav a.new::after{content:"novo";font-size:10px;margin-left:5px;background:var(--gs);color:#fff;padding:1px 5px;border-radius:5px;vertical-align:2px}
+.prev{margin:14px 0 6px;font-size:13px;color:var(--y);background:color-mix(in srgb,var(--ys) 16%,transparent);padding:8px 12px;border-radius:10px}
+h1{font:800 30px var(--disp);margin:16px 0 4px}
+h2{font:800 19px var(--disp);margin:24px 0 10px}
+.sub{color:var(--mut);font-size:14px}
+/* dani */
+.days{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:14px}
+.dayb{border:0;cursor:pointer;background:var(--card);box-shadow:var(--sh);border-radius:14px;padding:10px 12px;text-align:left;font:inherit;color:inherit;border:2px solid transparent}
+.dayb .dn{font:800 15px var(--disp)}.dayb .dd{font-size:12px;color:var(--mut)}
+.dayb .dc{font:800 26px var(--disp);margin-top:2px}.dayb .dl{font-size:12px;color:var(--mut)}
+.dayb.on{border-color:var(--ink);background:var(--ink);color:var(--bg)}.dayb.on .dd,.dayb.on .dl{color:inherit;opacity:.7}
+.dayb .mini{display:flex;gap:3px;margin-top:6px;height:6px;border-radius:3px;overflow:hidden;background:var(--line)}
+.dayb .mini i{display:block;height:100%}
+/* tile */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{background:var(--card);border-radius:16px;box-shadow:var(--sh);padding:12px 14px}
+.tile .big{font:800 30px var(--disp);line-height:1.1}.tile .lb{font-size:13px;color:var(--mut);font-weight:700}
+.prog{height:7px;background:var(--card2);border-radius:4px;margin-top:8px;overflow:hidden}.prog i{display:block;height:100%;border-radius:4px}
+/* po lampama */
+.lamps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.lt{border-radius:16px;padding:12px 14px;box-shadow:var(--sh);position:relative;overflow:hidden;background:var(--card)}
+.lt::before{content:"";position:absolute;inset:0 auto 0 0;width:6px}
+.lt.zv::before{background:var(--zv)}.lt.pa::before{background:repeating-linear-gradient(180deg,var(--pa) 0 8px,#fff 8px 16px)}
+.lt .nm{font-weight:800;font-size:14px}.lt .ct{font:800 32px var(--disp)}
+.lt .sp{font-size:12px;color:var(--mut)}
+.lt.zero{opacity:.45}
+/* filteri */
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}
+.fb{border:0;background:var(--card);box-shadow:var(--sh);padding:7px 13px;border-radius:99px;cursor:pointer;font:700 13px var(--body);color:var(--ink)}
+.fb.on{background:var(--ink);color:var(--bg)}
+/* paket */
+.pkg{background:var(--card);border-radius:18px;box-shadow:var(--sh);margin-bottom:12px;overflow:hidden;border-left:7px solid var(--line)}
+.pkg.zv{border-left-color:var(--zv)}.pkg.pa{border-left-color:var(--pa)}.pkg.mix{border-image:linear-gradient(var(--zv),var(--zv) 50%,var(--pa) 50%) 1}
+.pkg.done{background:color-mix(in srgb,var(--gs) 12%,var(--card))}
+.pkg.prio{box-shadow:0 0 0 3px var(--ys),var(--sh)}
+.ph{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 16px 4px}
+.who{font-weight:800;color:var(--mut);font-size:14px}
+.pill{font:800 12px var(--body);padding:4px 10px;border-radius:99px;white-space:nowrap}
+.pill.g{background:color-mix(in srgb,var(--gs) 20%,transparent);color:var(--g)}
+.pill.y{background:color-mix(in srgb,var(--ys) 24%,transparent);color:var(--y)}
+.pill.r{background:color-mix(in srgb,var(--rs) 20%,transparent);color:var(--r)}
+.pill.b{background:color-mix(in srgb,var(--bs) 20%,transparent);color:var(--b)}
+.pill.k{background:var(--card2);color:var(--mut)}
+.pill.two{background:var(--b);color:#fff}
+.pill.hot{background:var(--ys);color:#3a2600}
+.pack{margin-left:auto;display:flex;align-items:center;gap:8px;font:800 14px var(--body);cursor:pointer;padding:8px 14px;border-radius:12px;background:var(--card2);user-select:none}
+.pack input{width:22px;height:22px;accent-color:var(--g);margin:0}
+.pkg.done .pack{background:var(--g);color:#fff}
+.lamp{display:grid;grid-template-columns:90px 1fr auto;gap:4px 14px;align-items:center;padding:10px 16px}
+.lamp+.lamp{border-top:1px dashed var(--line)}
+.br{font:800 17px var(--disp)}
+.club{display:inline-block;font:800 11px var(--body);padding:2px 7px;border-radius:6px;margin-top:3px}
+.club.zv{background:var(--zv2);color:var(--zv)}.club.pa{background:var(--pa2);color:var(--pa)}
+.name{font:800 24px var(--disp);letter-spacing:.3px;line-height:1.15}
+.ps{font-size:12px;color:var(--mut);font-weight:700}
+.note{grid-column:2/-1;font-size:13px;font-weight:700;color:var(--y);background:color-mix(in srgb,var(--ys) 14%,transparent);padding:6px 10px;border-radius:9px}
+details.more{grid-column:2/-1}
+details.more summary{cursor:pointer;font-size:13px;color:var(--mut);font-weight:700;list-style:none}
+details.more summary::-webkit-details-marker{display:none}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.btn{border:0;background:var(--card2);color:var(--ink);border-radius:10px;padding:8px 11px;font:700 13px var(--body);cursor:pointer}
+.btn.ok{color:var(--g)}.btn.bad{color:var(--r)}
+select.btn{appearance:auto}
+.foot{padding:8px 16px 12px;font-size:13px;color:var(--mut);font-weight:600}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:14px;max-width:92vw;box-shadow:0 10px 30px #0005;display:none;z-index:9;font-weight:700;font-size:14px}
+.search{width:100%;border:0;background:var(--card);box-shadow:var(--sh);border-radius:14px;padding:12px 14px;font:700 16px var(--body);color:var(--ink);margin-top:12px}
+.tg{background:var(--card);border-radius:18px;box-shadow:var(--sh);padding:14px 16px}
+.msg{max-width:82%;padding:8px 12px;border-radius:14px;margin:6px 0;font-size:14px;font-weight:600;white-space:pre-line}
+.me{background:color-mix(in srgb,var(--bs) 22%,var(--card));margin-left:auto;border-bottom-right-radius:4px}.bot{background:var(--card2);border-bottom-left-radius:4px}
+@media(max-width:760px){.days{grid-template-columns:repeat(5,minmax(96px,1fr));overflow-x:auto;padding-bottom:4px}
+.tiles,.lamps{grid-template-columns:repeat(2,1fr)}h1{font-size:25px}
+.lamp{grid-template-columns:70px 1fr}.lamp>.stc{grid-column:2}.note,details.more{grid-column:1/-1}.pack{margin-left:0;width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<header><div class="hd">
+  <div class="logo">3DM<span>.</span></div>
+  <nav class="nav"><a class="on">Slanje</a><a>Štampači</a><a>Lager</a><a>Za proveru</a><a>Škart</a></nav>
+</div></header>
+<div class="wrap" id="login" style="display:none;max-width:380px;padding-top:60px">
+  <h1>Prijava</h1><div class="sub">Isti nalog kao 3DM Odluka.</div>
+  <input class="search" id="em" type="email" placeholder="email" autocomplete="username">
+  <input class="search" id="pw" type="password" placeholder="lozinka" autocomplete="current-password" onkeydown="if(event.key==='Enter')prijava()">
+  <button class="fb on" style="margin-top:14px;padding:12px 20px;font-size:15px" onclick="prijava()">Uđi</button>
+  <div class="sub" id="lerr" style="color:var(--r);margin-top:10px"></div>
+</div>
+<div class="wrap" id="app" style="display:none">
+  <div class="prev" id="meta">Učitavam…</div>
+
+  <h1 id="title"></h1><div class="sub" id="sub"></div>
+  <div class="days" id="days"></div>
+
+  <h2>Dan ukratko</h2>
+  <div class="tiles" id="tiles"></div>
+
+  <h2>Po lampama</h2>
+  <div class="lamps" id="lamps"></div>
+
+  <h2>Paketi za pakovanje</h2>
+  <input class="search" id="q" placeholder="🔎 Traži ime ili broj (na telefonu: mikrofon na tastaturi)" oninput="render()">
+  <div class="filters" id="filters"></div>
+  <div id="list"></div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DANI=[["PONEDELJAK","Ponedeljak","09.11."],["UTORAK","Utorak","10.11."],["SREDA","Sreda","11.11."],["ČETVRTAK","Četvrtak","12.11."],["PETAK","Petak","13.11."]];
+const LAMPE={"FK Crvena Zvezda":["FK Crvena Zvezda","zv"],"KK Crvena Zvezda":["KK Crvena Zvezda","zv"],"FK Partizan":["FK Partizan","pa"],"KK Partizan":["KK Partizan","pa"]};
+const LP=k=>LAMPE[k]||[k,"pa"];
+let R=[];
+const ST={odstampano:["Lice gotovo","g"],u_stampi:["U štampi","b"],ceka:["Čeka štampu","k"],ceka_odgovor:["Čeka odgovor kupca","r"]};
+const LIMIT={PONEDELJAK:18};const lim=d=>LIMIT[d]||6;
+let cur="PONEDELJAK",filt="sve";
+let packed={};
+const $=id=>document.getElementById(id);
+
+function toast(t){const x=$("toast");x.textContent=t;x.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>x.style.display="none",4200)}
+const base=b=>b.replace(/\/\d+$/,"");
+function pkgs(dan){const m=new Map();R.filter(r=>r.dan===dan).forEach(r=>{const k=base(r.br);if(!m.has(k))m.set(k,[]);m.get(k).push(r)});
+  return [...m.values()].sort((a,b)=>(b.some(r=>r.prio)-a.some(r=>r.prio))||a[0].br.localeCompare(b[0].br,undefined,{numeric:true}))}
+const isPacked=p=>p.every(r=>packed[r.br]);
+const pct=(a,b)=>b?Math.round(100*a/b):0;
+function render(){
+  const D=DANI.find(x=>x[0]===cur),rows=R.filter(r=>r.dan===cur),P=pkgs(cur);
+  const odst=rows.filter(r=>r.st==="odstampano").length,pak=rows.filter(r=>packed[r.br]).length,multi=P.filter(p=>p.length>1).length;
+  $("title").textContent=`Slanje · ${D[1]} ${D[2]}`;
+  $("sub").textContent=`${rows.length} lampi u ${P.length} paketa`+(multi?` · ${multi} paketa sa 2 lampe`:"")+` · BEX limit ${lim(cur)}`+(rows.length>lim(cur)?" ⚠ preko limita":"");
+  $("days").innerHTML=DANI.map(d=>{const rr=R.filter(r=>r.dan===d[0]),n=rr.length,o=rr.filter(r=>r.st==="odstampano").length,pk=rr.filter(r=>packed[r.br]).length;
+    return `<button class="dayb ${cur===d[0]?"on":""}" onclick="cur='${d[0]}';render()"><div class="dn">${d[1]}</div><div class="dd">${d[2]}</div><div class="dc">${n}</div><div class="dl">lampi · ${o} gotovo</div>
+    <div class="mini"><i style="width:${pct(pk,n)}%;background:var(--gs)"></i><i style="width:${pct(o-pk,n)}%;background:var(--bs)"></i></div></button>`}).join("");
+  const bar=(a,b,c)=>`<div class="prog"><i style="width:${pct(a,b)}%;background:${c}"></i></div>`;
+  $("tiles").innerHTML=
+   `<div class="tile"><div class="big">${rows.length}</div><div class="lb">lampi za slanje</div></div>`+
+   `<div class="tile"><div class="big">${odst}<small style="font-size:18px;color:var(--mut)">/${rows.length}</small></div><div class="lb">lica odštampano</div>${bar(odst,rows.length,"var(--bs)")}</div>`+
+   `<div class="tile"><div class="big">${rows.length}</div><div class="lb">kutija potrebno · odštampano iz baze</div></div>`+
+   `<div class="tile"><div class="big">${pak}<small style="font-size:18px;color:var(--mut)">/${rows.length}</small></div><div class="lb">spakovano</div>${bar(pak,rows.length,"var(--gs)")}</div>`;
+  $("lamps").innerHTML=Object.entries(LAMPE).map(([k,[nm,c]])=>{const rr=rows.filter(r=>r.lampa===k),o=rr.filter(r=>r.st==="odstampano").length,
+      ci=rr.filter(r=>r.pismo==="ćirilica").length;
+    return `<div class="lt ${c} ${rr.length?"":"zero"}"><div class="nm">${nm}</div><div class="ct">${rr.length}</div><div class="sp">${rr.length?`${o} gotovo · ${ci} ćir · ${rr.length-ci} lat`:"nema"}</div></div>`}).join("");
+  const F=[["sve","Sve"],["spremno","Spremno za pakovanje"],["stampa","Još se štampa"],["paketi","Paketi 2+"],["pak","Spakovano"]];
+  $("filters").innerHTML=F.map(f=>`<button class="fb ${filt===f[0]?"on":""}" onclick="filt='${f[0]}';render()">${f[1]}</button>`).join("");
+  const q=$("q").value.trim().toLowerCase();
+  const show=P.filter(p=>(filt==="sve"||(filt==="spremno"&&p.every(r=>r.st==="odstampano")&&!isPacked(p))||(filt==="stampa"&&p.some(r=>r.st!=="odstampano"))||(filt==="paketi"&&p.length>1)||(filt==="pak"&&isPacked(p)))
+     &&(!q||p.some(r=>(r.ime+" "+r.br+" "+r.kupac).toLowerCase().includes(q))));
+  $("list").innerHTML=show.length?show.map(card).join(""):'<div class="sub">Ništa za ovaj izbor.</div>';
+}
+function card(p){
+  const clubs=[...new Set(p.map(r=>LP(r.lampa)[1]))],cls=clubs.length>1?"mix":clubs[0];
+  const ready=p.every(r=>r.st==="odstampano"),done=isPacked(p),prio=p.some(r=>r.prio),key=base(p[0].br);
+  return `<div class="pkg ${cls} ${done?"done":""} ${prio?"prio":""}">
+   <div class="ph"><span class="who">${p[0].kupac}</span>${p.length>1?`<span class="pill two">${p.length} LAMPE · pakuj zajedno</span>`:""}${prio?'<span class="pill hot">⚡ HITNO</span>':""}
+     ${ready?`<label class="pack"><input type="checkbox" ${done?"checked":""} onchange="pk('${key}',this.checked)">${done?"Spakovano ✔":"Spakovano"}</label>`:'<span class="pack" style="cursor:default;color:var(--mut)">čeka lice</span>'}</div>
+   ${p.map(r=>`<div class="lamp">
+      <div><div class="br">${r.br}</div><span class="club ${LP(r.lampa)[1]}">${LP(r.lampa)[0]}</span></div>
+      <div><div class="name">${r.ime}</div><div class="ps">${r.pismo}</div></div>
+      <div class="stc"><span class="pill ${ST[r.st][1]}">${ST[r.st][0]}</span></div>
+      ${r.nap?`<div class="note">${r.nap}</div>`:""}
+      <details class="more"><summary>⋯ Opcije</summary><div class="acts">
+        <button class="btn ok" onclick="ok('${r.br}')">✔ Lice odštampano</button>
+        <button class="btn bad" onclick="bad('${r.br}','lice')">✖ Loše lice</button>
+        <button class="btn bad" onclick="bad('${r.br}','kutija')">✖ Loša kutija</button>
+        <select class="btn" onchange="mv('${r.br}',this.value)"><option value="">Prebaci na dan…</option>${DANI.filter(x=>x[0]!==r.dan).map(x=>`<option value="${x[0]}">${x[1]}</option>`).join("")}</select>
+      </div></details></div>`).join("")}
+   ${p.length>1?`<div class="foot">📦 U jedan paket: ${p.map(r=>`${r.br} ${r.ime}`).join(" + ")}</div>`:""}
+  </div>`;
+}
+async function pk(key,v){const rr=R.filter(r=>base(r.br)===key&&r.dan===cur).map(r=>r.br);
+  rr.forEach(b=>{if(v)packed[b]=1;else delete packed[b]});render();
+  const q=v?sb.from("slanje_spakovano").upsert(rr.map(br=>({br}))):sb.from("slanje_spakovano").delete().in("br",rr);
+  const {error}=await q;if(error){toast("Nije sačuvano: "+error.message);await ucitaj()}}
+const USKORO="Radi kad se poveže radionički računar (sledeći korak izrade).";
+function ok(b){toast(USKORO)}
+function bad(b,w){toast(USKORO)}
+function mv(b,d){if(d)toast(USKORO);render()}
+const sb=supabase.createClient("https://auwkcdfsflhptaggasbv.supabase.co","sb_publishable_12adbySKqi26fKObwmiKbg_u2ieOfe1",{auth:{persistSession:true,autoRefreshToken:true,storageKey:"3dm-slanje-auth"}});
+async function ucitaj(){
+  const [l,p,m]=await Promise.all([sb.from("slanje_lampe").select("*"),sb.from("slanje_spakovano").select("br"),sb.from("slanje_meta").select("*").eq("kljuc","poslednje_osvezavanje")]);
+  if(l.error){toast("Greška: "+l.error.message);return}
+  R=l.data.map(r=>({br:r.br,lampa:r.lampa,ime:r.ime,pismo:r.pismo||"",dan:r.dan,st:r.lice,kupac:r.kupac||"",nap:r.napomena||"",prio:r.prio}));
+  packed={};(p.data||[]).forEach(x=>packed[x.br]=1);
+  const mm=(m.data||[])[0];$("meta").textContent="Podaci: "+(mm?mm.vrednost+" · "+new Date(mm.azurirano).toLocaleString("sr-RS"):"još nema osvežavanja");
+  if(!DANI.some(d=>d[0]===cur&&R.some(r=>r.dan===cur))){const f=DANI.find(d=>R.some(r=>r.dan===d[0]));if(f)cur=f[0]}
+  render()}
+async function prijava(){$("lerr").textContent="";const {error}=await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});
+  if(error){$("lerr").textContent="Pogrešan email ili lozinka.";return}start()}
+async function start(){const {data}=await sb.auth.getSession();
+  if(!data.session){$("login").style.display="";$("app").style.display="none";return}
+  $("login").style.display="none";$("app").style.display="";await ucitaj()}
+setInterval(()=>{if($("app").style.display!=="none")ucitaj()},120000);
+start();
+</script>
+</body>
+</html>
