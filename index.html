@@ -140,13 +140,15 @@ select.btn{appearance:auto}
 <div class="toast" id="toast"></div>
 
 <script>
-const DANI=[["PONEDELJAK","Ponedeljak","09.11."],["UTORAK","Utorak","10.11."],["SREDA","Sreda","11.11."],["ČETVRTAK","Četvrtak","12.11."],["PETAK","Petak","13.11."]];
+let DANI=[];const IMEDANA=["Nedelja","Ponedeljak","Utorak","Sreda","Četvrtak","Petak","Subota"];
+function praviDane(){const k=[...new Set(R.map(r=>r.dan))].sort((a,b)=>a==="bez"?1:b==="bez"?-1:a.localeCompare(b));
+  DANI=k.map(d=>{if(d==="bez")return["bez","Bez datuma",""];const t=new Date(d+"T12:00:00");return[d,IMEDANA[t.getDay()],`${String(t.getDate()).padStart(2,"0")}.${String(t.getMonth()+1).padStart(2,"0")}.`]})}
 const LAMPE={"FK Crvena Zvezda":["FK Crvena Zvezda","zv"],"KK Crvena Zvezda":["KK Crvena Zvezda","zv"],"FK Partizan":["FK Partizan","pa"],"KK Partizan":["KK Partizan","pa"]};
 const LP=k=>LAMPE[k]||[k,"pa"];
 let R=[];
 const ST={odstampano:["Lice gotovo","g"],u_stampi:["U štampi","b"],ceka:["Čeka štampu","k"],ceka_odgovor:["Čeka odgovor kupca","r"]};
-const LIMIT={PONEDELJAK:18};const lim=d=>LIMIT[d]||6;
-let cur="PONEDELJAK",filt="sve";
+let LIMIT={pon:18,ost:13};const lim=d=>d!=="bez"&&new Date(d+"T12:00:00").getDay()===1?LIMIT.pon:LIMIT.ost;
+let cur="",filt="sve";
 let packed={};
 const $=id=>document.getElementById(id);
 
@@ -157,7 +159,7 @@ function pkgs(dan){const m=new Map();R.filter(r=>r.dan===dan).forEach(r=>{const 
 const isPacked=p=>p.every(r=>packed[r.br]);
 const pct=(a,b)=>b?Math.round(100*a/b):0;
 function render(){
-  const D=DANI.find(x=>x[0]===cur),rows=R.filter(r=>r.dan===cur),P=pkgs(cur);
+  const D=DANI.find(x=>x[0]===cur)||["","Nema lampi",""],rows=R.filter(r=>r.dan===cur),P=pkgs(cur);
   const odst=rows.filter(r=>r.st==="odstampano").length,pak=rows.filter(r=>packed[r.br]).length,multi=P.filter(p=>p.length>1).length;
   $("title").textContent=`Slanje · ${D[1]} ${D[2]}`;
   $("sub").textContent=`${rows.length} lampi u ${P.length} paketa`+(multi?` · ${multi} paketa sa 2 lampe`:"")+` · BEX limit ${lim(cur)}`+(rows.length>lim(cur)?" ⚠ preko limita":"");
@@ -221,7 +223,7 @@ async function ostali(){
       <div><div class="name" style="font-size:20px">${r.ime}</div><div class="ps">${DANI.find(d=>d[0]===r.dan)?.[1]||r.dan||""} · ${r.kupac}</div></div>
       <span class="pill ${ST[r.st]?.[1]||"k"}">${ST[r.st]?.[0]||r.st}</span><div class="note">${r.nap||"Kupac još nije potvrdio SMS"}</div></div>`).join(""):prazno("Sve je čisto","Nema lampi za proveru.");}
   if(tab==="stampaci"){const {data}=await sb.from("slanje_stampaci").select("*").order("naziv");
-    $("stampaci").innerHTML=data&&data.length?data.map(p=>`<div class="row"><div class="br">${p.naziv}</div><div><b>${p.stanje||""}</b><div class="ps">${p.posao||""}${p.preostalo_min!=null?" · još "+p.preostalo_min+" min":""}</div></div><div class="ps">danas: ${(p.danas||[]).length}</div></div>`).join("")
+    $("stampaci").innerHTML=data&&data.length?data.map(p=>`<div class="row"><div class="br">${p.naziv}</div><div><b>${p.stanje||""}</b><div class="ps">${p.posao||""}${p.preostalo_min!=null?" · još "+p.preostalo_min+" min":""}</div></div><div class="ps">danas gotovo: ${(p.danas||[]).length}${(p.danas||[]).length?"<br>"+p.danas.map(g=>`${g.kraj} ${g.posao}`).join("<br>"):""}</div></div>`).join("")
      :prazno("Još nema podataka","Ovde će stajati P1S STARI, P1S V2, A1 NOVI i A1 STARI: šta štampaju, koliko je ostalo i spisak šta je svaki danas odštampao. Puni ga radionički računar na 10 minuta — to je sledeći korak izrade.");}
   if(tab==="lager") $("lager").innerHTML=prazno("Uskoro","Kad popuniš tab Lager u tabeli i proverimo kako ga n8n uparuje, radionički računar će ga prebacivati ovde, sa dugmetom „Imam ga u ruci“ pre nego što se lice uzme za narudžbinu.");
   if(tab==="skart"){const {data}=await sb.from("slanje_skart").select("*").order("created_at",{ascending:false}).limit(100);
@@ -229,11 +231,12 @@ async function ostali(){
      :prazno("Još nema škarta","Svaki klik na „Loše lice“ ili „Loša kutija“ (u aplikaciji ili na Telegramu) upisaće se ovde, po štampaču. Dugmad proradiće kad se poveže radionički računar.");}
 }
 async function ucitaj(){
-  const [l,p,m]=await Promise.all([sb.from("slanje_lampe").select("*"),sb.from("slanje_spakovano").select("br"),sb.from("slanje_meta").select("*").eq("kljuc","poslednje_osvezavanje")]);
+  const [l,p,m]=await Promise.all([sb.from("slanje_lampe").select("*"),sb.from("slanje_spakovano").select("br"),sb.from("slanje_meta").select("*")]);
   if(l.error){toast("Greška: "+l.error.message);return}
-  R=l.data.map(r=>({br:r.br,lampa:r.lampa,ime:r.ime,pismo:r.pismo||"",dan:r.dan,st:r.lice,kupac:r.kupac||"",nap:r.napomena||"",prio:r.prio}));
+  R=l.data.map(r=>({br:r.br,lampa:r.lampa,ime:r.ime,pismo:r.pismo||"",dan:r.datum_slanja||"bez",st:r.lice,kupac:r.kupac||"",nap:r.napomena||"",prio:r.prio}));
   packed={};(p.data||[]).forEach(x=>packed[x.br]=1);
-  const mm=(m.data||[])[0];$("meta").textContent="Podaci: "+(mm?mm.vrednost+" · "+new Date(mm.azurirano).toLocaleString("sr-RS"):"još nema osvežavanja");
+  const M=Object.fromEntries((m.data||[]).map(x=>[x.kljuc,x]));const mm=M.poslednje_osvezavanje;
+  if(M.limit_ponedeljak)LIMIT.pon=+M.limit_ponedeljak.vrednost||18;if(M.limit_ostali)LIMIT.ost=+M.limit_ostali.vrednost||13;praviDane();$("meta").textContent="Podaci: "+(mm?mm.vrednost+" · "+new Date(mm.azurirano).toLocaleString("sr-RS"):"još nema osvežavanja");
   if(!DANI.some(d=>d[0]===cur&&R.some(r=>r.dan===cur))){const f=DANI.find(d=>R.some(r=>r.dan===d[0]));if(f)cur=f[0]}
   render();ostali()}
 async function prijava(){$("lerr").textContent="";const {error}=await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});
